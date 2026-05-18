@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Conda / local environments
+.conda/
+.venv/
+env/
+venv/
+
+# Data and generated runtime files
+data/*.h5ad
+indexes/
+logs/
+!indexes/.gitkeep
+!logs/.gitkeep
+*.faiss
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+
+# Source assignment artifacts kept locally, not in repo
+*.pdf
+*.pptx

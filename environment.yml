@@ -1,0 +1,18 @@
+name: single-cell-ann
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.12
+  - flask
+  - flask-cors
+  - numpy
+  - pandas
+  - h5py
+  - scipy
+  - scikit-learn
+  - faiss-gpu
+  - pytest
+  - requests
+  - pip
