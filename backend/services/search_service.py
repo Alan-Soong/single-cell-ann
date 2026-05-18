@@ -54,11 +54,13 @@ class SearchService:
                     break
 
             elapsed_ms = (time.perf_counter() - started) * 1000
+            query_index = data_service.snapshot.cell_id_to_index[cell_id]
             result = {
                 "query": {
                     "cell_id": cell_id,
                     "top_k": top_k,
                 },
+                "query_cell": data_service.get_cell_metadata(query_index),
                 "query_time_ms": round(elapsed_ms, 3),
                 "index": index_service.snapshot.summary(),
                 "result_count": len(hits),
