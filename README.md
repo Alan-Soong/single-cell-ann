@@ -52,6 +52,26 @@ npm run dev
 
 默认后端地址为 `http://127.0.0.1:5000`，前端开发地址为 `http://127.0.0.1:5173`。
 
+## 后端检查
+
+```powershell
+conda activate single-cell-ann
+python -m pytest tests
+python tests/smoke_midterm.py
+```
+
+`smoke_midterm.py` 会先检查健康状态、加载数据和读取 UMAP 抽样点。如果当前环境没有 FAISS，会跳过索引与查询链路；在 `faiss-gpu` 或 `faiss-cpu` 可用的 Conda 环境中会继续构建索引并执行 Top-K 查询。
+
+## API 摘要
+
+- `GET /api/health`
+- `POST /api/datasets/load`
+- `GET /api/datasets/current`
+- `POST /api/index/build`
+- `GET /api/index/status`
+- `POST /api/search`
+- `GET /api/visualization/cells?limit=5000`
+
 ## 中期演示流程
 
 1. 启动后端和前端。
