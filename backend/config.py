@@ -21,3 +21,5 @@ class Config:
     DEFAULT_TOP_K = int(os.getenv("SCANN_DEFAULT_TOP_K", "10"))
     MAX_TOP_K = int(os.getenv("SCANN_MAX_TOP_K", "100"))
     DEFAULT_VIS_LIMIT = int(os.getenv("SCANN_DEFAULT_VIS_LIMIT", "5000"))
+    FAISS_NLIST = int(os.getenv("SCANN_FAISS_NLIST", "256"))
+    FAISS_NPROBE = int(os.getenv("SCANN_FAISS_NPROBE", "16"))

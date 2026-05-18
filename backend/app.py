@@ -10,6 +10,7 @@ except ImportError:  # pragma: no cover - development fallback before env setup
 from backend.config import Config
 from backend.routes.datasets import datasets_bp
 from backend.routes.health import health_bp
+from backend.routes.indexes import index_bp
 from backend.routes.visualization import visualization_bp
 
 
@@ -22,6 +23,7 @@ def create_app(config: type[Config] = Config) -> Flask:
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(datasets_bp, url_prefix="/api/datasets")
+    app.register_blueprint(index_bp, url_prefix="/api/index")
     app.register_blueprint(visualization_bp, url_prefix="/api/visualization")
 
     @app.errorhandler(404)
