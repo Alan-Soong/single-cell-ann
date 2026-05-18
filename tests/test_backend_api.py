@@ -29,3 +29,13 @@ def test_dataset_load_reads_pca_vectors_and_metadata():
     assert payload["vector_dim"] == 30
     assert "cell_type" in payload["metadata_fields"]
     assert payload["sample_cell_ids"]
+
+
+def test_cors_allows_vite_fallback_port():
+    app = create_app()
+    client = app.test_client()
+
+    response = client.get("/api/health", headers={"Origin": "http://127.0.0.1:5174"})
+
+    assert response.status_code == 200
+    assert response.headers["Access-Control-Allow-Origin"] == "http://127.0.0.1:5174"
