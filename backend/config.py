@@ -12,6 +12,8 @@ class Config:
     DATA_PATH = Path(os.getenv("SCANN_DATA_PATH", BASE_DIR / "data" / "liver.h5ad"))
     INDEX_DIR = Path(os.getenv("SCANN_INDEX_DIR", BASE_DIR / "indexes"))
     LOG_DIR = Path(os.getenv("SCANN_LOG_DIR", BASE_DIR / "logs"))
+    RUNTIME_DIR = Path(os.getenv("SCANN_RUNTIME_DIR", BASE_DIR / "runtime"))
+    USERS_PATH = Path(os.getenv("SCANN_USERS_PATH", RUNTIME_DIR / "users.json"))
 
     HOST = os.getenv("SCANN_HOST", "127.0.0.1")
     PORT = int(os.getenv("SCANN_PORT", "5000"))

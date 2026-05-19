@@ -8,6 +8,7 @@ except ImportError:  # pragma: no cover - development fallback before env setup
     CORS = None
 
 from backend.config import Config
+from backend.routes.auth import auth_bp
 from backend.routes.datasets import datasets_bp
 from backend.routes.health import health_bp
 from backend.routes.indexes import index_bp
@@ -23,6 +24,7 @@ def create_app(config: type[Config] = Config) -> Flask:
         CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     app.register_blueprint(health_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(datasets_bp, url_prefix="/api/datasets")
     app.register_blueprint(index_bp, url_prefix="/api/index")
     app.register_blueprint(search_bp, url_prefix="/api")
