@@ -115,6 +115,7 @@ class DataService:
         self._snapshots: dict[str, DatasetSnapshot] = {}
         self._active_dataset_id: str | None = None
         self._snapshot = DatasetSnapshot()
+        self._loaded_registry_path: str | None = None
 
     @property
     def snapshot(self) -> DatasetSnapshot:
@@ -479,7 +480,11 @@ class DataService:
         return None
 
     def _load_registry(self, registry_path: Path) -> None:
+        resolved_registry_path = str(registry_path.resolve())
         if not registry_path.exists():
+            if self._loaded_registry_path != resolved_registry_path:
+                self._records = {}
+                self._loaded_registry_path = resolved_registry_path
             return
         with registry_path.open("r", encoding="utf-8") as file:
             raw = json.load(file)
@@ -488,6 +493,7 @@ class DataService:
             record = DatasetRecord(**item)
             records[record.dataset_id] = record
         self._records = records
+        self._loaded_registry_path = resolved_registry_path
 
     def _save_registry(self, registry_path: Path) -> None:
         registry_path.parent.mkdir(parents=True, exist_ok=True)
