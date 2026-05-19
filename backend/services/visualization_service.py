@@ -104,6 +104,7 @@ class VisualizationService:
                     point["gene"] = gene_match.summary()
                 points.append(point)
 
+        points = points[:limit]
         return {
             "dataset": snapshots[0].summary() if len(snapshots) == 1 else None,
             "datasets": [snapshot.summary() for snapshot in snapshots],
@@ -114,7 +115,8 @@ class VisualizationService:
             "color_by": color_by,
             "filters": filters,
             "gene": [match.summary() for match in gene_matches.values()],
-            "points": points[:limit],
+            "stats": self._view_stats(points, snapshots, total_visible, color_by),
+            "points": points,
         }
 
     def options(
@@ -271,6 +273,64 @@ class VisualizationService:
                 matches = np.flatnonzero(row_gene_indices == gene_index)
                 values[int(row_index)] = float(data[start + int(matches[0])]) if len(matches) else 0.0
         return values
+
+    @staticmethod
+    def _view_stats(
+        points: list[dict[str, Any]],
+        snapshots: list[DatasetSnapshot],
+        visible_total: int,
+        color_by: str,
+    ) -> dict[str, Any]:
+        dataset_counts = Counter(point["dataset_name"] or point["dataset_id"] for point in points)
+        color_counts = Counter(str(point.get("color_value") or "") for point in points if not color_by.startswith("gene:"))
+        metadata_counts = {
+            field_name: [
+                {"value": value, "count": int(count)}
+                for value, count in Counter(point.get(field_name) or "" for point in points).most_common(20)
+            ]
+            for field_name in METADATA_FIELDS
+        }
+
+        expression_values = [
+            float(point["expression"])
+            for point in points
+            if isinstance(point.get("expression"), (int, float))
+        ]
+        expression_stats = None
+        if expression_values:
+            values = np.asarray(expression_values, dtype=np.float64)
+            expression_stats = {
+                "min": float(np.min(values)),
+                "max": float(np.max(values)),
+                "mean": float(np.mean(values)),
+                "median": float(np.median(values)),
+                "expressing_count": int(np.count_nonzero(values > 0)),
+                "expressing_fraction": float(np.count_nonzero(values > 0) / len(values)),
+            }
+
+        xs = [point["x"] for point in points]
+        ys = [point["y"] for point in points]
+        bounds = None
+        if xs and ys:
+            bounds = {
+                "x_min": float(min(xs)),
+                "x_max": float(max(xs)),
+                "y_min": float(min(ys)),
+                "y_max": float(max(ys)),
+            }
+
+        return {
+            "dataset_count": len(snapshots),
+            "total_cells": int(sum(snapshot.cell_count for snapshot in snapshots)),
+            "visible_cells": int(visible_total),
+            "sampled_points": len(points),
+            "sample_fraction": float(len(points) / visible_total) if visible_total else 0.0,
+            "by_dataset": [{"value": value, "count": int(count)} for value, count in dataset_counts.most_common()],
+            "by_color": [{"value": value, "count": int(count)} for value, count in color_counts.most_common(30)],
+            "metadata_counts": metadata_counts,
+            "expression": expression_stats,
+            "bounds": bounds,
+        }
 
     def _iter_gene_matches(self, path: Path, query: str, limit: int) -> list[GeneMatch]:
         with h5py.File(path, "r") as h5:
