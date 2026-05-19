@@ -117,9 +117,24 @@ export async function searchCells({ cellId, topK, datasetId, indexId }) {
   return data;
 }
 
-export async function getVisualizationCells(limit = 5000, datasetIds = []) {
-  const params = { limit };
+export async function getVisualizationCells(limit = 5000, datasetIds = [], options = {}) {
+  const params = {
+    limit,
+    color_by: options.colorBy,
+    sample_strategy: options.sampleStrategy,
+  };
   if (datasetIds.length) params.dataset_ids = datasetIds.join(",");
+  Object.entries(options.filters || {}).forEach(([fieldName, values]) => {
+    if (values?.length) params[`filter_${fieldName}`] = values.join(",");
+  });
   const { data } = await api.get("/visualization/cells", { params });
+  return data;
+}
+
+export async function getVisualizationOptions({ datasetIds = [], geneQuery = "" } = {}) {
+  const params = {};
+  if (datasetIds.length) params.dataset_ids = datasetIds.join(",");
+  if (geneQuery) params.gene_query = geneQuery;
+  const { data } = await api.get("/visualization/options", { params });
   return data;
 }

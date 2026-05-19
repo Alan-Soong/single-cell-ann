@@ -341,7 +341,97 @@ tbody tr:last-child td {
 
 .chart {
   width: 100%;
-  min-height: 520px;
+  min-height: 620px;
+}
+
+.visual-workbench {
+  display: grid;
+  gap: 14px;
+}
+
+.visual-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.visual-toolbar label {
+  display: grid;
+  gap: 6px;
+  color: #52616f;
+  font-size: 13px;
+}
+
+.visual-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+}
+
+.visual-chart-panel {
+  min-width: 0;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.visual-side-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.stat-card {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.stat-card span {
+  display: block;
+  color: #667788;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.stat-card strong {
+  font-size: 18px;
+}
+
+.legend-list {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.legend-list h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.legend-row span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
 }
 
 .spin {
@@ -365,7 +455,9 @@ tbody tr:last-child td {
   }
 
   .control-grid,
-  .upload-row {
+  .upload-row,
+  .visual-toolbar,
+  .visual-grid {
     grid-template-columns: 1fr;
   }
 }

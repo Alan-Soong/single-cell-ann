@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import { DataZoomComponent, GridComponent, LegendComponent, ToolboxComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
 import { use as useEcharts, init as initEcharts } from "echarts/core";
-import { ScatterChart } from "echarts/charts";
+import { LinesChart, ScatterChart } from "echarts/charts";
 import { CanvasRenderer } from "echarts/renderers";
 import {
   Activity,
@@ -27,6 +27,7 @@ import {
   getHealth,
   getIndexStatus,
   getVisualizationCells,
+  getVisualizationOptions,
   listDatasets,
   loadDataset,
   loginUser,
@@ -39,9 +40,23 @@ import {
   validateDatasets,
 } from "./api/client";
 
-useEcharts([GridComponent, TooltipComponent, ScatterChart, CanvasRenderer]);
+useEcharts([GridComponent, TooltipComponent, VisualMapComponent, LegendComponent, DataZoomComponent, ToolboxComponent, ScatterChart, LinesChart, CanvasRenderer]);
 
 const palette = ["#2563eb", "#dc2626", "#059669", "#d97706", "#7c3aed", "#0891b2", "#be123c", "#4d7c0f"];
+const expressionPalette = ["#f8fafc", "#c7d2fe", "#60a5fa", "#2563eb", "#1e3a8a"];
+const metadataFields = ["cell_type", "disease", "AgeGroup", "tissue"];
+const colorFieldLabels = {
+  dataset: "数据集",
+  cell_type: "细胞类型",
+  disease: "疾病",
+  AgeGroup: "年龄组",
+  tissue: "组织",
+};
+
+function colorByLabel(colorBy) {
+  if (colorBy?.startsWith("gene:")) return colorBy.replace("gene:", "基因 ");
+  return colorFieldLabels[colorBy] || colorBy || "-";
+}
 
 const ROLE_LABELS = {
   normal_user: "普通用户",
@@ -116,17 +131,19 @@ function StatGrid({ rows }) {
   );
 }
 
-function UmapChart({ points, queryCell, hits }) {
+function UmapChart({ points, queryCell, hits, colorBy, stats, onPickCell }) {
   const ref = useRef(null);
   const hitKeys = useMemo(() => new Set((hits || []).map((hit) => `${hit.dataset_id}:${hit.cell_id}`)), [hits]);
+  const isExpression = colorBy?.startsWith("gene:");
 
   useEffect(() => {
     if (!ref.current) return;
     const chart = initEcharts(ref.current);
-    const colorByDataset = new Map();
+    const colorByValue = new Map();
     const data = (points || []).map((point) => {
-      if (!colorByDataset.has(point.dataset_id)) {
-        colorByDataset.set(point.dataset_id, palette[colorByDataset.size % palette.length]);
+      const colorKey = point.color_value || point.dataset_id;
+      if (!colorByValue.has(colorKey)) {
+        colorByValue.set(colorKey, palette[colorByValue.size % palette.length]);
       }
       return {
         value: [point.x, point.y],
@@ -134,8 +151,14 @@ function UmapChart({ points, queryCell, hits }) {
         dataset_id: point.dataset_id,
         dataset_name: point.dataset_name,
         cell_type: point.cell_type,
+        disease: point.disease,
+        AgeGroup: point.AgeGroup,
+        tissue: point.tissue,
+        row_index: point.row_index,
+        color_value: point.color_value,
+        expression: point.expression,
         itemStyle: {
-          color: colorByDataset.get(point.dataset_id),
+          color: isExpression ? undefined : colorByValue.get(colorKey),
           opacity: hitKeys.has(`${point.dataset_id}:${point.cell_id}`) ? 0.95 : 0.45,
         },
       };
@@ -149,6 +172,7 @@ function UmapChart({ points, queryCell, hits }) {
         dataset_id: hit.dataset_id,
         dataset_name: hit.dataset_name,
         cell_type: hit.cell_type,
+        rank: hit.rank,
       }));
 
     const queryData = queryCell?.umap
@@ -165,18 +189,46 @@ function UmapChart({ points, queryCell, hits }) {
 
     chart.setOption({
       animation: false,
-      grid: { left: 8, right: 8, top: 8, bottom: 8 },
+      grid: { left: 16, right: 16, top: 18, bottom: 28 },
       tooltip: {
         trigger: "item",
         formatter: (params) => {
           const item = params.data || {};
-          return `${item.name}<br/>${item.dataset_name || item.dataset_id || "-"}<br/>${item.cell_type || "-"}`;
+          const expressionLine = item.expression !== undefined ? `<br/>表达量 ${Number(item.expression).toFixed(3)}` : "";
+          return `${item.name}<br/>${item.dataset_name || item.dataset_id || "-"}<br/>${item.cell_type || "-"}<br/>${item.disease || "-"} / ${item.AgeGroup || "-"}${expressionLine}`;
         },
       },
+      toolbox: {
+        right: 8,
+        feature: {
+          restore: {},
+          saveAsImage: { pixelRatio: 2 },
+        },
+      },
+      visualMap: isExpression
+        ? {
+            min: stats?.expression?.min ?? 0,
+            max: stats?.expression?.max ?? 1,
+            calculable: true,
+            orient: "horizontal",
+            left: "center",
+            bottom: 0,
+            inRange: { color: expressionPalette },
+          }
+        : undefined,
+      dataZoom: [
+        { type: "inside", xAxisIndex: 0, filterMode: "none" },
+        { type: "inside", yAxisIndex: 0, filterMode: "none" },
+      ],
       xAxis: { type: "value", show: false },
       yAxis: { type: "value", show: false },
       series: [
-        { name: "cells", type: "scatter", symbolSize: 5, data },
+        {
+          name: "cells",
+          type: "scatter",
+          symbolSize: 5,
+          data: isExpression ? data.map((item) => ({ ...item, value: [item.value[0], item.value[1], item.expression || 0] })) : data,
+        },
         {
           name: "top-k",
           type: "scatter",
@@ -197,13 +249,20 @@ function UmapChart({ points, queryCell, hits }) {
       ],
     });
 
+    chart.off("click");
+    chart.on("click", (params) => {
+      if (params?.data?.name && params?.data?.dataset_id) {
+        onPickCell?.(params.data);
+      }
+    });
+
     const resize = () => chart.resize();
     window.addEventListener("resize", resize);
     return () => {
       window.removeEventListener("resize", resize);
       chart.dispose();
     };
-  }, [points, queryCell, hits, hitKeys]);
+  }, [points, queryCell, hits, hitKeys, colorBy, stats, isExpression, onPickCell]);
 
   if (!points?.length) {
     return <div className="empty-plot">未加载 UMAP 点</div>;
@@ -224,6 +283,12 @@ function App() {
   const [nlist, setNlist] = useState(256);
   const [nprobe, setNprobe] = useState(16);
   const [visPoints, setVisPoints] = useState([]);
+  const [visOptions, setVisOptions] = useState(null);
+  const [visualColorBy, setVisualColorBy] = useState("cell_type");
+  const [visualLimit, setVisualLimit] = useState(5000);
+  const [visualSampleStrategy, setVisualSampleStrategy] = useState("even");
+  const [visualFilters, setVisualFilters] = useState({ cell_type: "", disease: "", AgeGroup: "", tissue: "" });
+  const [visualStats, setVisualStats] = useState(null);
   const [queryCellId, setQueryCellId] = useState("");
   const [queryDatasetId, setQueryDatasetId] = useState("");
   const [topK, setTopK] = useState(10);
@@ -312,8 +377,31 @@ function App() {
 
   async function refreshVisualization(datasetIds = selectedDatasetIds) {
     if (!canVisualize || !datasetIds.length) return;
-    const visData = await getVisualizationCells(5000, datasetIds);
+    const filters = Object.fromEntries(
+      Object.entries(visualFilters)
+        .filter(([, value]) => value)
+        .map(([fieldName, value]) => [fieldName, [value]]),
+    );
+    const [optionsData, visData] = await Promise.all([
+      getVisualizationOptions({ datasetIds }),
+      getVisualizationCells(visualLimit, datasetIds, {
+        colorBy: visualColorBy,
+        filters,
+        sampleStrategy: visualSampleStrategy,
+      }),
+    ]);
+    setVisOptions(optionsData);
     setVisPoints(visData.points || []);
+    setVisualStats(visData.stats || null);
+  }
+
+  function handlePickVisualizationCell(point) {
+    setQueryDatasetId(point.dataset_id);
+    setQueryCellId(point.name);
+  }
+
+  function clearVisualFilters() {
+    setVisualFilters({ cell_type: "", disease: "", AgeGroup: "", tissue: "" });
   }
 
   async function handleAuthSubmit(event) {
@@ -712,7 +800,97 @@ function App() {
           </button>
         }
       >
-        <UmapChart points={visPoints} queryCell={searchResult?.query_cell} hits={searchResult?.hits || []} />
+        <div className="visual-workbench">
+          <div className="visual-toolbar">
+            <label>
+              着色
+              <select value={visualColorBy} onChange={(event) => setVisualColorBy(event.target.value)} disabled={!canVisualize}>
+                <option value="dataset">数据集</option>
+                {metadataFields.map((fieldName) => (
+                  <option key={fieldName} value={fieldName}>
+                    {colorFieldLabels[fieldName]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              点数
+              <input
+                type="number"
+                min="100"
+                max="5000"
+                step="100"
+                value={visualLimit}
+                onChange={(event) => setVisualLimit(Number(event.target.value))}
+                disabled={!canVisualize}
+              />
+            </label>
+            <label>
+              抽样
+              <select value={visualSampleStrategy} onChange={(event) => setVisualSampleStrategy(event.target.value)} disabled={!canVisualize}>
+                <option value="even">均匀</option>
+                <option value="random">随机</option>
+              </select>
+            </label>
+            {metadataFields.map((fieldName) => (
+              <label key={fieldName}>
+                {colorFieldLabels[fieldName]}
+                <select
+                  value={visualFilters[fieldName] || ""}
+                  onChange={(event) => setVisualFilters({ ...visualFilters, [fieldName]: event.target.value })}
+                  disabled={!canVisualize}
+                >
+                  <option value="">全部</option>
+                  {(visOptions?.categorical_fields?.[fieldName] || []).slice(0, 80).map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.value} ({item.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            <button className="secondary-button" onClick={clearVisualFilters} disabled={!canVisualize}>
+              清除过滤
+            </button>
+          </div>
+
+          <div className="visual-grid">
+            <div className="visual-chart-panel">
+              <UmapChart
+                points={visPoints}
+                queryCell={searchResult?.query_cell}
+                hits={searchResult?.hits || []}
+                colorBy={visualColorBy}
+                stats={visualStats}
+                onPickCell={handlePickVisualizationCell}
+              />
+            </div>
+            <aside className="visual-side-panel">
+              <div className="stat-card">
+                <span>可见细胞</span>
+                <strong>{formatNumber(visualStats?.visible_cells)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>抽样点</span>
+                <strong>{formatNumber(visualStats?.sampled_points)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>抽样比例</span>
+                <strong>{visualStats ? `${(visualStats.sample_fraction * 100).toFixed(1)}%` : "-"}</strong>
+              </div>
+              <div className="legend-list">
+                <h3>{colorByLabel(visualColorBy)}</h3>
+                {(visualStats?.by_color?.length ? visualStats.by_color : visualStats?.by_dataset || []).slice(0, 12).map((item, index) => (
+                  <div className="legend-row" key={`${item.value}-${index}`}>
+                    <span className="legend-swatch" style={{ backgroundColor: palette[index % palette.length] }} />
+                    <span>{item.value || "-"}</span>
+                    <strong>{formatNumber(item.count)}</strong>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
       </ModulePanel>
     </main>
   );
