@@ -311,7 +311,7 @@ function App() {
   const [topK, setTopK] = useState(10);
   const [searchResult, setSearchResult] = useState(null);
   const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ username: "admin_user", password: "secret123", role: "admin" });
+  const [authForm, setAuthForm] = useState({ username: "demo_admin", password: "demo_password", role: "admin" });
   const [uploadFile, setUploadFile] = useState(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");

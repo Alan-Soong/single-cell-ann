@@ -12,10 +12,15 @@ health_bp = Blueprint("health", __name__)
 def health():
     runtime = inspect_faiss_runtime()
     data_path = current_app.config["DATA_PATH"]
+    base_dir = current_app.config["BASE_DIR"]
+    try:
+        display_data_path = data_path.relative_to(base_dir).as_posix()
+    except ValueError:
+        display_data_path = str(data_path)
     return jsonify(
         {
             "status": "ok",
-            "data_path": str(data_path),
+            "data_path": display_data_path,
             "data_exists": data_path.exists(),
             "faiss": {
                 "available": runtime.available,

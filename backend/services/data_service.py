@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 
 METADATA_FIELDS = ("cell_type", "disease", "AgeGroup", "tissue")
 REQUIRED_H5AD_FIELDS = ("obsm/X_pca", "obsm/X_umap", "obs/_index")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass
@@ -191,7 +192,7 @@ class DataService:
         with self._lock:
             record = self._get_record(dataset_id, registry_path)
             try:
-                validation = self._inspect_h5ad(Path(record.data_path))
+                validation = self._inspect_h5ad(self._resolve_data_path(record.data_path))
                 record.status = "validated"
                 record.cell_count = validation["cell_count"]
                 record.vector_dim = validation["vector_dim"]
@@ -238,7 +239,7 @@ class DataService:
                 if registry_path is None:
                     raise ValueError("registry_path is required when dataset_id is used")
                 record = self._get_record(dataset_id, registry_path)
-                resolved = Path(record.data_path).resolve()
+                resolved = self._resolve_data_path(record.data_path)
             elif path is not None:
                 resolved = path.resolve()
                 if registry_path is not None:
@@ -259,7 +260,7 @@ class DataService:
                     name=record.name,
                     source=record.source,
                     status="loaded",
-                    data_path=str(resolved),
+                    data_path=self._portable_path(resolved),
                     vectors=np.ascontiguousarray(vectors),
                     umap=np.ascontiguousarray(umap),
                     cell_ids=cell_ids,
@@ -289,7 +290,7 @@ class DataService:
                     record.updated_at = self._now()
                     self._save_registry(registry_path)
                 self._snapshot.status = "error"
-                self._snapshot.data_path = str(resolved)
+                self._snapshot.data_path = self._portable_path(resolved)
                 self._snapshot.error = str(exc)
                 raise
 
@@ -455,7 +456,7 @@ class DataService:
 
         record = self._record_from_path(resolved, source)
         dataset_id = record.dataset_id
-        if dataset_id in self._records and Path(self._records[dataset_id].data_path).resolve() != resolved:
+        if dataset_id in self._records and self._resolve_data_path(self._records[dataset_id].data_path) != resolved:
             dataset_id = f"{dataset_id}_{self._short_hash(str(resolved))}"
             record.dataset_id = dataset_id
         self._records[dataset_id] = record
@@ -466,7 +467,7 @@ class DataService:
         return DatasetRecord(
             dataset_id=self._dataset_id_from_path(path),
             name=path.stem,
-            data_path=str(path.resolve()),
+            data_path=self._portable_path(path),
             source=source,
             file_size_bytes=path.stat().st_size if path.exists() else 0,
             created_at=now,
@@ -475,7 +476,7 @@ class DataService:
 
     def _record_for_path(self, path: Path) -> DatasetRecord | None:
         for record in self._records.values():
-            if Path(record.data_path).resolve() == path.resolve():
+            if self._resolve_data_path(record.data_path) == path.resolve():
                 return record
         return None
 
@@ -608,6 +609,21 @@ class DataService:
     def _dataset_id_from_path(path: Path) -> str:
         slug = re.sub(r"[^a-zA-Z0-9]+", "_", path.stem).strip("_").lower()
         return slug or f"dataset_{DataService._short_hash(str(path.resolve()))}"
+
+    @staticmethod
+    def _portable_path(path: Path) -> str:
+        resolved = path.resolve()
+        try:
+            return resolved.relative_to(PROJECT_ROOT).as_posix()
+        except ValueError:
+            return str(resolved)
+
+    @staticmethod
+    def _resolve_data_path(value: str) -> Path:
+        path = Path(value)
+        if path.is_absolute():
+            return path.resolve()
+        return (PROJECT_ROOT / path).resolve()
 
     @staticmethod
     def _short_hash(value: str) -> str:
