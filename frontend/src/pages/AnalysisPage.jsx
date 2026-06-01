@@ -37,8 +37,8 @@ function ResultsTable({ hits, compact = false }) {
   if (compact) {
     return (
       <div className="compact-results">
-        {hits.slice(0, 6).map((hit) => (
-          <div className="compact-result-row" key={`${hit.dataset_id}:${hit.cell_id}`}>
+        {hits.slice(0, 6).map((hit, index) => (
+          <div className="compact-result-row" key={`${hit.dataset_id}:${hit.cell_id}`} style={{ "--reveal-order": index }}>
             <strong>{hit.rank}</strong>
             <div>
               <span>{hit.cell_id}</span>
@@ -66,8 +66,8 @@ function ResultsTable({ hits, compact = false }) {
           </tr>
         </thead>
         <tbody>
-          {hits.map((hit) => (
-            <tr key={`${hit.dataset_id}:${hit.cell_id}`}>
+          {hits.map((hit, index) => (
+            <tr className="result-drawer-row" key={`${hit.dataset_id}:${hit.cell_id}`} style={{ "--reveal-order": Math.min(index, 10) }}>
               <td><strong>{hit.rank}</strong></td>
               <td>{hit.dataset_name || hit.dataset_id}</td>
               <td className="mono-cell">{hit.cell_id}</td>
@@ -247,6 +247,11 @@ export function AnalysisPage({ workspace, guestMode }) {
               <span><i className="query-key" /> 查询细胞</span>
               <span><i className="hit-key" /> Top-K 邻域{hasHits ? ` ${visibleOverlayHitCount}/${totalHitCount}` : ""}</span>
             </div>
+            {workspace.visualLoading ? (
+              <div className="plot-refresh-overlay" aria-live="polite">
+                <span><LoaderCircle size={14} className="spin" />正在更新视图</span>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -282,7 +287,7 @@ export function AnalysisPage({ workspace, guestMode }) {
             </button>
           </form>
 
-          <section className="metric-row">
+          <section className={`metric-row ${hasHits ? "has-results" : ""}`} key={workspace.searchResult?.query_time_ms ?? "empty"}>
             <div><span>查询耗时</span><strong>{workspace.searchResult ? `${workspace.searchResult.query_time_ms} ms` : "-"}</strong></div>
             <div><span>命中结果</span><strong>{workspace.searchResult?.result_count ?? "-"}</strong></div>
           </section>

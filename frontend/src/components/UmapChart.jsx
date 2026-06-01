@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
-import { LinesChart, ScatterChart } from "echarts/charts";
+import { EffectScatterChart, LinesChart, ScatterChart } from "echarts/charts";
 import { DataZoomComponent, GridComponent, ToolboxComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
 import { init as initEcharts, use as useEcharts } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 
 import { CHART_PALETTE, EXPRESSION_PALETTE } from "../constants";
 
-useEcharts([GridComponent, TooltipComponent, VisualMapComponent, DataZoomComponent, ToolboxComponent, ScatterChart, LinesChart, CanvasRenderer]);
+useEcharts([GridComponent, TooltipComponent, VisualMapComponent, DataZoomComponent, ToolboxComponent, ScatterChart, EffectScatterChart, LinesChart, CanvasRenderer]);
 
 function buildColorMap(stats, points) {
   const entries = stats?.by_color?.length ? stats.by_color : stats?.by_dataset || [];
@@ -58,6 +58,7 @@ export function UmapChart({
 
   useEffect(() => {
     if (!ref.current || !points?.length) return undefined;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const chart = initEcharts(ref.current);
     const colorMap = buildColorMap(stats, points);
     const data = points.map((point) => {
@@ -112,8 +113,8 @@ export function UmapChart({
         : [];
 
     chart.setOption({
-      animation: !isBackdrop,
-      animationDuration: 320,
+      animation: !isBackdrop && !reduceMotion,
+      animationDuration: isBackdrop || reduceMotion ? 0 : 320,
       grid: isBackdrop ? { left: 0, right: 0, top: 0, bottom: 0 } : { left: 18, right: 18, top: 18, bottom: isExpression ? 48 : 24 },
       tooltip: isBackdrop
         ? { show: false }
@@ -191,15 +192,26 @@ export function UmapChart({
                 type: "scatter",
                 symbolSize: 13,
                 data: hitData,
+                animationDelay: reduceMotion ? 0 : (index) => index * 24,
+                animationDuration: reduceMotion ? 0 : 280,
                 itemStyle: { color: "#e66c32", borderColor: "#ffffff", borderWidth: 1.5 },
                 z: 3,
               },
               {
                 name: "query",
-                type: "scatter",
+                type: reduceMotion ? "scatter" : "effectScatter",
                 symbol: "diamond",
                 symbolSize: 18,
                 data: queryData,
+                ...(reduceMotion
+                  ? {}
+                  : {
+                      rippleEffect: {
+                        period: 3.6,
+                        scale: 2.2,
+                        brushType: "stroke",
+                      },
+                    }),
                 itemStyle: { color: "#17312f", borderColor: "#ffffff", borderWidth: 2 },
                 z: 4,
               },
