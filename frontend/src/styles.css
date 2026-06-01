@@ -132,6 +132,7 @@ p {
 .primary-button:hover:not(:disabled) {
   border-color: var(--teal-dark);
   background: var(--teal-dark);
+  transform: translateY(-1px);
 }
 
 .secondary-button {
@@ -144,6 +145,7 @@ p {
 .icon-button:hover:not(:disabled) {
   border-color: #9ebcb6;
   background: #f3f9f7;
+  transform: translateY(-1px);
 }
 
 .text-button,
@@ -159,6 +161,7 @@ p {
 .text-button:hover:not(:disabled),
 .link-button:hover:not(:disabled) {
   color: var(--teal);
+  transform: translateY(-1px);
 }
 
 .icon-button {
@@ -225,6 +228,7 @@ p {
   font-size: 11px;
   font-weight: 750;
   line-height: 1;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .status-dot {
@@ -302,11 +306,20 @@ p {
   background: rgba(15, 53, 50, 0.44);
 }
 
+.login-particle-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .login-brand,
 .login-story,
 .login-proof {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
 }
 
 .login-brand {
@@ -315,6 +328,7 @@ p {
   display: flex;
   align-items: center;
   gap: 11px;
+  animation: login-rise 420ms ease-out both;
 }
 
 .login-brand-mark,
@@ -327,6 +341,14 @@ p {
   border-radius: 8px;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.1);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.login-visual:hover .login-brand-mark {
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 22px rgba(3, 33, 31, 0.16);
+  transform: translateY(-1px);
 }
 
 .login-brand div,
@@ -351,6 +373,7 @@ p {
   left: 7%;
   max-width: 630px;
   transform: translateY(-53%);
+  animation: login-story-enter 520ms 80ms ease-out both;
 }
 
 .login-story p {
@@ -383,6 +406,7 @@ p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   max-width: 720px;
   border-top: 1px solid rgba(255, 255, 255, 0.22);
+  animation: login-rise 520ms 160ms ease-out both;
 }
 
 .login-proof div {
@@ -422,6 +446,7 @@ p {
 .login-panel-inner {
   width: 100%;
   padding: 42px;
+  animation: login-panel-enter 420ms 80ms ease-out both;
 }
 
 .login-status {
@@ -522,6 +547,7 @@ p {
 .guest-button:hover:not(:disabled) {
   border-color: #9ebcb6;
   background: #f3f9f7;
+  transform: translateY(-1px);
 }
 
 .login-divider {
@@ -543,6 +569,11 @@ p {
 
 .guest-button svg:last-child {
   margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.guest-button:hover:not(:disabled) svg:last-child {
+  transform: translateX(3px);
 }
 
 .login-footnote {
@@ -629,11 +660,13 @@ p {
   font-size: 13px;
   font-weight: 700;
   text-align: left;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .nav-item:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
@@ -932,6 +965,7 @@ p {
   grid-template-rows: 68px minmax(0, 1fr);
   min-width: 0;
   background: #ffffff;
+  animation: workspace-surface-enter 260ms ease-out both;
 }
 
 .embedding-header {
@@ -1317,6 +1351,7 @@ tbody tr:hover {
   grid-template-columns: minmax(0, 1fr) 300px;
   min-height: 100%;
   background: #ffffff;
+  animation: workspace-surface-enter 260ms ease-out both;
 }
 
 .registry-main {
@@ -1407,6 +1442,7 @@ tbody tr:hover {
 
 .registry-table tbody tr {
   cursor: pointer;
+  transition: background-color 140ms ease;
 }
 
 .checkbox-column {
@@ -1522,6 +1558,7 @@ tbody tr:hover {
   border-radius: 7px;
   padding: 17px;
   background: #ffffff;
+  animation: workspace-surface-enter 240ms ease-out both;
 }
 
 .active-index-title {
@@ -1582,6 +1619,7 @@ tbody tr:hover {
   border-radius: 7px;
   padding: 15px;
   background: #ffffff;
+  animation: workspace-surface-enter 280ms ease-out both;
 }
 
 .selected-dataset-box {
@@ -1624,11 +1662,18 @@ tbody tr:hover {
   border-radius: 6px;
   padding: 9px;
   background: #ffffff;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .index-list-row.active {
   border-color: #b8d9d4;
   background: #f3f9f7;
+}
+
+.index-list-row:hover {
+  border-color: #a9d0ca;
+  background: #f7fbfa;
+  transform: translateY(-1px);
 }
 
 .index-list-icon {
@@ -1661,6 +1706,65 @@ tbody tr:hover {
 .index-list-meta > span:not(.status-badge) {
   color: var(--muted);
   font-size: 10px;
+}
+
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-story-enter {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-53% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-53%);
+  }
+}
+
+@keyframes login-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes workspace-surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .login-particle-canvas {
+    display: none;
+  }
 }
 
 @media (min-width: 1500px) {

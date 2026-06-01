@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Database, Dna, Eye, FlaskConical, LoaderCircle, LogIn, Sparkles } from "lucide-react";
 
 import { formatNumber } from "../constants";
+import { LoginParticleOverlay } from "../components/LoginParticleOverlay";
 import { UmapChart } from "../components/UmapChart";
 import { Field, StatusBadge } from "../components/ui";
 
@@ -26,6 +27,7 @@ export function LoginPage({ workspace, onBrowse }) {
         <div className="login-grid" />
         <UmapChart points={workspace.visPoints} stats={workspace.visualStats} colorBy={workspace.appliedVisualState.colorBy} variant="backdrop" />
         <div className="login-visual-shade" />
+        <LoginParticleOverlay />
         <div className="login-brand">
           <span className="login-brand-mark">
             <Dna size={25} />
