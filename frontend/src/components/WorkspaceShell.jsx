@@ -15,7 +15,7 @@ const PAGE_META = {
   indexes: { eyebrow: "Vector index", title: "索引管理", description: "构建、检查与切换 FAISS 服务索引" },
 };
 
-export function WorkspaceShell({ view, onViewChange, guestMode, onExitGuest, workspace, children }) {
+export function WorkspaceShell({ view, onViewChange, guestMode, onExitGuest, onLogout, workspace, children }) {
   const page = PAGE_META[view];
   const faissMode = workspace.health?.faiss?.mode || workspace.indexStatus?.mode || "unavailable";
   const accountLabel = workspace.auth.authenticated ? ROLE_LABELS[workspace.role] || workspace.role : "只读访客";
@@ -71,7 +71,7 @@ export function WorkspaceShell({ view, onViewChange, guestMode, onExitGuest, wor
             <IconButton
               label={workspace.auth.authenticated ? "退出登录" : "返回登录"}
               className="quiet-icon"
-              onClick={workspace.auth.authenticated ? workspace.handleLogout : onExitGuest}
+              onClick={workspace.auth.authenticated ? onLogout : onExitGuest}
               disabled={Boolean(workspace.busy)}
             >
               {workspace.auth.authenticated ? <LogOut size={16} /> : <LogIn size={16} />}

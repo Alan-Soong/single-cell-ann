@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowRight, Database, Dna, Eye, FlaskConical, LoaderCircle, LogIn, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Database, Dna, Eye, FlaskConical, LoaderCircle, LogIn, Sparkles } from "lucide-react";
 
 import { formatNumber } from "../constants";
 import { LoginParticleOverlay } from "../components/LoginParticleOverlay";
 import { UmapChart } from "../components/UmapChart";
 import { Field, StatusBadge } from "../components/ui";
 
-export function LoginPage({ workspace, onBrowse }) {
+export function LoginPage({ workspace, onBack, onBrowse }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ username: "", password: "", role: "admin" });
   const disabled = Boolean(workspace.busy);
@@ -62,6 +62,9 @@ export function LoginPage({ workspace, onBrowse }) {
       </section>
 
       <section className="login-panel">
+        <button className="login-back-button" type="button" onClick={onBack}>
+          <ArrowLeft size={16} />返回平台介绍
+        </button>
         <div className="login-panel-inner">
           <div className="login-status">
             <StatusBadge
