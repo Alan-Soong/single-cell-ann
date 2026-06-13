@@ -117,6 +117,15 @@ export async function searchCells({ cellId, topK, datasetId, indexId }) {
   return data;
 }
 
+export async function analyzeSearchResult({ searchResult, question, enableThinking }) {
+  const { data } = await api.post("/search/analyze", {
+    search_result: searchResult,
+    question: question || undefined,
+    enable_thinking: Boolean(enableThinking),
+  });
+  return data;
+}
+
 export async function getVisualizationCells(limit = 5000, datasetIds = [], options = {}) {
   const params = {
     limit,
