@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, current_app, jsonify, request
 
 from backend.routes.permissions import require_roles
+from backend.services.llm_analysis_service import LlmAnalysisError, llm_analysis_service
 from backend.services.search_service import search_service
 
 
@@ -35,3 +36,27 @@ def search():
         return jsonify({"error": "invalid_request", "message": str(exc)}), 400
     except RuntimeError as exc:
         return jsonify({"error": "search_unavailable", "message": str(exc)}), 503
+
+
+@search_bp.post("/search/analyze")
+@require_roles("normal_user", "researcher", "data_manager", "admin")
+def analyze_search():
+    payload = request.get_json(silent=True) or {}
+    search_result = payload.get("search_result")
+    question = str(payload.get("question") or "").strip() or None
+    enable_thinking = payload.get("enable_thinking")
+    if enable_thinking is not None and not isinstance(enable_thinking, bool):
+        return jsonify({"error": "invalid_request", "message": "enable_thinking must be a boolean"}), 400
+
+    try:
+        result = llm_analysis_service.analyze_search_result(
+            search_result,
+            current_app.config,
+            user_question=question,
+            enable_thinking=enable_thinking,
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": "invalid_request", "message": str(exc)}), 400
+    except LlmAnalysisError as exc:
+        return jsonify({"error": "llm_unavailable", "message": str(exc)}), 503
