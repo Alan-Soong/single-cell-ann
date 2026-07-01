@@ -62,12 +62,41 @@ export function IndexPage({ workspace, guestMode }) {
                 <option value="separate">独立索引</option>
               </select>
             </Field>
-            <Field label="nlist" hint="范围 1 - 65536">
-              <input type="number" min="1" max="65536" value={workspace.nlist} onChange={(event) => workspace.setNlist(event.target.value)} onBlur={workspace.normalizeIndexParameters} disabled={!workspace.canBuildIndex} />
+            <Field label="索引类型">
+              <select value={workspace.indexType} onChange={(event) => workspace.setIndexType(event.target.value)} disabled={!workspace.canBuildIndex}>
+                <option value="ivf_flat">IVF_FLAT</option>
+                <option value="hnsw">HNSW</option>
+              </select>
             </Field>
-            <Field label="nprobe" hint="范围 1 - nlist">
-              <input type="number" min="1" max="65536" value={workspace.nprobe} onChange={(event) => workspace.setNprobe(event.target.value)} onBlur={workspace.normalizeIndexParameters} disabled={!workspace.canBuildIndex} />
+            <Field label="距离度量" hint="L2 / 余弦 / 内积">
+              <select value={workspace.indexMetric} onChange={(event) => workspace.setIndexMetric(event.target.value)} disabled={!workspace.canBuildIndex}>
+                <option value="l2">L2 欧氏距离</option>
+                <option value="cosine">Cosine 余弦距离</option>
+                <option value="ip">Inner Product 内积</option>
+              </select>
             </Field>
+            {workspace.indexType === "hnsw" ? (
+              <>
+                <Field label="M (连接数)" hint="默认 32">
+                  <input type="number" min="4" max="128" value={workspace.hnswM} onChange={(e) => workspace.setHnswM(Number(e.target.value))} disabled={!workspace.canBuildIndex} />
+                </Field>
+                <Field label="efConstruction" hint="默认 200">
+                  <input type="number" min="8" max="2000" value={workspace.hnswEfConstruction} onChange={(e) => workspace.setHnswEfConstruction(Number(e.target.value))} disabled={!workspace.canBuildIndex} />
+                </Field>
+                <Field label="efSearch" hint="默认 64">
+                  <input type="number" min="1" max="2000" value={workspace.hnswEfSearch} onChange={(e) => workspace.setHnswEfSearch(Number(e.target.value))} disabled={!workspace.canBuildIndex} />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="nlist" hint="范围 1 - 65536">
+                  <input type="number" min="1" max="65536" value={workspace.nlist} onChange={(event) => workspace.setNlist(event.target.value)} onBlur={workspace.normalizeIndexParameters} disabled={!workspace.canBuildIndex} />
+                </Field>
+                <Field label="nprobe" hint="范围 1 - nlist">
+                  <input type="number" min="1" max="65536" value={workspace.nprobe} onChange={(event) => workspace.setNprobe(event.target.value)} onBlur={workspace.normalizeIndexParameters} disabled={!workspace.canBuildIndex} />
+                </Field>
+              </>
+            )}
           </div>
           <button className="primary-button full-button" onClick={workspace.handleBuildIndex} disabled={buildDisabled}>
             {workspace.busy === "index" ? <LoaderCircle size={17} className="spin" /> : <Play size={17} />}

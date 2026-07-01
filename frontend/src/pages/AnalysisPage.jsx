@@ -281,6 +281,35 @@ export function AnalysisPage({ workspace, guestMode }) {
             <Field label="Top-K">
               <input type="number" min="1" max="100" value={workspace.topK} onChange={(event) => workspace.setTopK(event.target.value)} onBlur={workspace.normalizeTopK} />
             </Field>
+
+            <details className="inspector-details">
+              <summary className="inspector-summary"><Filter size={14} />条件过滤（可选）</summary>
+              <div className="inspector-details-body">
+                {METADATA_FIELDS.map((fieldName) => (
+                  <Field key={`search-${fieldName}`} label={COLOR_FIELD_LABELS[fieldName]}>
+                    <input
+                      value={workspace.searchFilters[fieldName] || ""}
+                      onChange={(event) => workspace.setSearchFilters({ ...workspace.searchFilters, [fieldName]: event.target.value })}
+                      placeholder={`限定${COLOR_FIELD_LABELS[fieldName]}`}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </details>
+
+            <div className="search-mode-row">
+              <label className="toggle-label">
+                <input type="checkbox" checked={workspace.exactMode && !workspace.compareMode} onChange={(event) => { workspace.setExactMode(event.target.checked); if (event.target.checked) workspace.setCompareMode(false); }} />
+                <span>精确检索（暴力 L2）</span>
+              </label>
+            </div>
+            <div className="search-mode-row">
+              <label className="toggle-label">
+                <input type="checkbox" checked={workspace.compareMode} onChange={(event) => { workspace.setCompareMode(event.target.checked); if (event.target.checked) workspace.setExactMode(false); }} />
+                <span>ANN vs 精确 对比评测</span>
+              </label>
+            </div>
+
             <button className="primary-button full-button" type="submit" disabled={queryDisabled}>
               {workspace.busy === "search" ? <LoaderCircle size={17} className="spin" /> : <Play size={17} />}
               执行检索
@@ -291,6 +320,75 @@ export function AnalysisPage({ workspace, guestMode }) {
             <div><span>查询耗时</span><strong>{workspace.searchResult ? `${workspace.searchResult.query_time_ms} ms` : "-"}</strong></div>
             <div><span>命中结果</span><strong>{workspace.searchResult?.result_count ?? "-"}</strong></div>
           </section>
+
+          {workspace.compareResult?.evaluation ? (
+            <section className="inspector-section compare-section">
+              <h3><BarChart3 size={15} />对比评测</h3>
+              <div className="compare-stats">
+                <div className="compare-stat">
+                  <span>Recall</span>
+                  <strong>{(workspace.compareResult.evaluation.recall * 100).toFixed(1)}%</strong>
+                </div>
+                <div className="compare-stat">
+                  <span>命中重叠</span>
+                  <strong>{workspace.compareResult.evaluation.overlap_count} / {workspace.compareResult.exact.result_count}</strong>
+                </div>
+                <div className="compare-stat">
+                  <span>加速比</span>
+                  <strong>{workspace.compareResult.evaluation.speedup}x</strong>
+                </div>
+              </div>
+              <div className="compare-latency">
+                <span>ANN {workspace.compareResult.ann.query_time_ms}ms</span>
+                <span className="compare-vs">vs</span>
+                <span>精确 {workspace.compareResult.exact.query_time_ms}ms</span>
+              </div>
+            </section>
+          ) : null}
+
+          {workspace.canSearch ? (
+            <details className="inspector-details">
+              <summary className="inspector-summary"><FlaskConical size={14} />批量查询评测</summary>
+              <div className="inspector-details-body">
+                <Field label="Cell ID 列表（每行一个）">
+                  <textarea
+                    value={workspace.batchCellIds}
+                    onChange={(e) => workspace.setBatchCellIds(e.target.value)}
+                    placeholder="cell_id_1&#10;cell_id_2&#10;..."
+                    rows={4}
+                    className="batch-textarea"
+                    disabled={Boolean(workspace.busy)}
+                  />
+                </Field>
+                <button
+                  className="primary-button full-button small-button"
+                  onClick={workspace.handleBatchSearch}
+                  disabled={Boolean(workspace.busy) || !workspace.batchCellIds.trim()}
+                >
+                  {workspace.busy === "batch" ? <LoaderCircle size={15} className="spin" /> : <Play size={15} />}
+                  执行批量评测
+                </button>
+                {workspace.batchResult ? (
+                  <div className="batch-result-preview">
+                    <div className="batch-stats">
+                      <span>成功 {workspace.batchResult.successful}/{workspace.batchResult.total_queries}</span>
+                      <span>QPS {workspace.batchResult.qps}</span>
+                      <span>Avg {workspace.batchResult.latency_avg_ms}ms</span>
+                      <span>P50 {workspace.batchResult.latency_p50_ms}ms</span>
+                      <span>P99 {workspace.batchResult.latency_p99_ms}ms</span>
+                    </div>
+                    {workspace.batchResult.errors?.length ? (
+                      <div className="batch-errors">
+                        {workspace.batchResult.errors.map((e, i) => (
+                          <p key={i}>{e.cell_id}: {e.error}</p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
 
           <section className="inspector-section result-preview">
             <div className="section-title-row">

@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   BarChart3,
   Bot,
@@ -14,68 +16,17 @@ import { CHART_PALETTE, formatNumber } from "../constants";
 import { EmptyState, Field, StatusBadge } from "../components/ui";
 import { UmapChart } from "../components/UmapChart";
 
-function InlineMarkdown({ text }) {
-  const parts = String(text).split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={`${part}-${index}`}>{part}</span>;
-  });
-}
-
-function MarkdownReport({ text }) {
+function SafeMarkdown({ text }) {
   if (!text) return null;
-  const blocks = [];
-  const lines = text.split(/\r?\n/);
-  let listItems = [];
-
-  function flushList() {
-    if (!listItems.length) return;
-    blocks.push({ type: "list", items: listItems });
-    listItems = [];
+  try {
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]} className="ai-report-markdown">
+        {text}
+      </ReactMarkdown>
+    );
+  } catch {
+    return <pre className="ai-report-markdown">{text}</pre>;
   }
-
-  lines.forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) {
-      flushList();
-      return;
-    }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      flushList();
-      blocks.push({ type: "heading", level: heading[1].length, text: heading[2] });
-      return;
-    }
-    const list = line.match(/^[-*]\s+(.+)$/);
-    if (list) {
-      listItems.push(list[1]);
-      return;
-    }
-    flushList();
-    blocks.push({ type: "paragraph", text: line });
-  });
-  flushList();
-
-  return (
-    <article className="ai-report-markdown">
-      {blocks.map((block, index) => {
-        if (block.type === "heading") {
-          const HeadingTag = block.level === 1 ? "h2" : "h3";
-          return <HeadingTag key={`${block.text}-${index}`}><InlineMarkdown text={block.text} /></HeadingTag>;
-        }
-        if (block.type === "list") {
-          return (
-            <ul key={`list-${index}`}>
-              {block.items.map((item, itemIndex) => <li key={`${item}-${itemIndex}`}><InlineMarkdown text={item} /></li>)}
-            </ul>
-          );
-        }
-        return <p key={`${block.text}-${index}`}><InlineMarkdown text={block.text} /></p>;
-      })}
-    </article>
-  );
 }
 
 function StatTile({ label, value, detail, icon: Icon }) {
@@ -261,7 +212,7 @@ export function AiAnalysisPage({ workspace, guestMode }) {
               {usage?.total_tokens ? <StatusBadge value={`Token ${usage.total_tokens}`} tone="neutral" dot={false} /> : null}
             </div>
             {workspace.llmAnalysis?.analysis ? (
-              <MarkdownReport text={workspace.llmAnalysis.analysis} />
+              <SafeMarkdown text={workspace.llmAnalysis.analysis} />
             ) : (
               <EmptyState title="暂无 AI 报告" description="执行检索后点击生成，模型会基于 Top-K 邻域和元数据输出 Markdown 分析。" />
             )}

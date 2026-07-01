@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUpRight,
+  Beaker,
   Database,
   Dna,
   Eye,
@@ -11,13 +12,16 @@ import {
   Gauge,
   GitBranch,
   Layers3,
+  LoaderCircle,
   Search,
   ShieldCheck,
 } from "lucide-react";
+import { useState } from "react";
 
 import { LoginParticleOverlay } from "../components/LoginParticleOverlay";
 import { UmapChart } from "../components/UmapChart";
 import { formatNumber } from "../constants";
+import { demoSearch } from "../api/client";
 
 const CAPABILITIES = [
   {
@@ -48,6 +52,25 @@ export function LandingPage({ workspace, onLogin, onBrowse }) {
   const activeIndex = workspace.activeIndex;
   const faissMode = workspace.health?.faiss?.mode || workspace.indexStatus?.mode || "unavailable";
   const serviceReady = !workspace.connectionError && !workspace.initializing;
+
+  const [demoResult, setDemoResult] = useState(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState("");
+  const [demoCellId, setDemoCellId] = useState("");
+
+  async function handleDemoSearch() {
+    setDemoLoading(true);
+    setDemoError("");
+    setDemoResult(null);
+    try {
+      const data = await demoSearch(demoCellId, 5);
+      setDemoResult(data);
+    } catch (e) {
+      setDemoError(e?.response?.data?.message || e.message || "Demo 检索失败");
+    } finally {
+      setDemoLoading(false);
+    }
+  }
 
   return (
     <main className="landing-page">
@@ -200,6 +223,47 @@ export function LandingPage({ workspace, onLogin, onBrowse }) {
       </section>
 
       <section className="landing-access" id="access">
+        <div className="landing-section-inner landing-access-grid">
+          <div>
+            <p>体验 Demo 检索</p>
+            <h2>无需注册，感受<br />ANN 邻域检索能力。</h2>
+          </div>
+          <div className="landing-access-actions">
+            <div className="demo-search-box">
+              <input
+                value={demoCellId}
+                onChange={(e) => setDemoCellId(e.target.value)}
+                placeholder="输入细胞 ID（留空使用默认）"
+                disabled={demoLoading}
+                className="demo-search-input"
+              />
+              <button className="landing-solid-button" onClick={handleDemoSearch} disabled={demoLoading || !serviceReady}>
+                {demoLoading ? <LoaderCircle size={16} className="spin" /> : <Beaker size={16} />}
+                Demo 检索
+              </button>
+            </div>
+            {demoError ? <p className="demo-error">{demoError}</p> : null}
+            {demoResult ? (
+              <div className="demo-result-preview">
+                <p><strong>{demoResult.query_cell?.cell_id || "-"}</strong> 的 Top-{demoResult.result_count} 邻域</p>
+                <div className="demo-hit-list">
+                  {(demoResult.hits || []).slice(0, 5).map((h) => (
+                    <div key={`${h.dataset_id}:${h.cell_id}`} className="demo-hit-row">
+                      <span className="demo-hit-rank">#{h.rank}</span>
+                      <span className="demo-hit-cell">{h.cell_id}</span>
+                      <span className="demo-hit-type">{h.cell_type || "-"}</span>
+                      <span className="demo-hit-dist">{h.distance.toFixed(4)}</span>
+                    </div>
+                  ))}
+                </div>
+                <small>耗时 {demoResult.query_time_ms}ms</small>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-access" id="login-access">
         <div className="landing-section-inner landing-access-grid">
           <div>
             <p>开始使用：Start exploring</p>
