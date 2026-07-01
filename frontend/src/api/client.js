@@ -87,13 +87,21 @@ export async function getCurrentDataset() {
   return data;
 }
 
-export async function buildIndex({ datasetIds, mode, nlist, nprobe } = {}) {
-  const { data } = await api.post("/index/build", {
+export async function buildIndex({ datasetIds, mode, nlist, nprobe, indexType, metric, M, efConstruction, efSearch } = {}) {
+  const payload = {
     dataset_ids: datasetIds || [],
     mode: mode || "combined",
+    index_type: indexType || "ivf_flat",
+    metric: metric || "l2",
     nlist,
     nprobe,
-  });
+  };
+  if (indexType === "hnsw") {
+    payload.M = M || 32;
+    payload.ef_construction = efConstruction || 200;
+    payload.ef_search = efSearch || 64;
+  }
+  const { data } = await api.post("/index/build", payload);
   return data;
 }
 
@@ -107,13 +115,55 @@ export async function getIndexStatus() {
   return data;
 }
 
-export async function searchCells({ cellId, topK, datasetId, indexId }) {
-  const { data } = await api.post("/search", {
+export async function searchCells({ cellId, topK, datasetId, indexId, metadataFilters } = {}) {
+  const payload = {
+    cell_id: cellId,
+    top_k: topK,
+    dataset_id: datasetId || undefined,
+    index_id: indexId || undefined,
+  };
+  if (metadataFilters) {
+    Object.entries(metadataFilters).forEach(([key, value]) => {
+      if (value) payload[key] = value;
+    });
+  }
+  const { data } = await api.post("/search", payload);
+  return data;
+}
+
+export async function exactSearch({ cellId, topK, datasetId }) {
+  const { data } = await api.post("/search/exact", {
+    cell_id: cellId,
+    top_k: topK,
+    dataset_id: datasetId || undefined,
+  });
+  return data;
+}
+
+export async function compareSearch({ cellId, topK, datasetId, indexId }) {
+  const { data } = await api.post("/search/compare", {
     cell_id: cellId,
     top_k: topK,
     dataset_id: datasetId || undefined,
     index_id: indexId || undefined,
   });
+  return data;
+}
+
+export async function batchSearch({ cellIds, topK, datasetId, indexId }) {
+  const { data } = await api.post("/search/batch", {
+    cell_ids: cellIds,
+    top_k: topK,
+    dataset_id: datasetId || undefined,
+    index_id: indexId || undefined,
+  });
+  return data;
+}
+
+export async function demoSearch(cellId, topK = 5) {
+  const params = { top_k: topK };
+  if (cellId) params.cell_id = cellId;
+  const { data } = await api.get("/demo/search", { params });
   return data;
 }
 
@@ -145,5 +195,21 @@ export async function getVisualizationOptions({ datasetIds = [], geneQuery = "" 
   if (datasetIds.length) params.dataset_ids = datasetIds.join(",");
   if (geneQuery) params.gene_query = geneQuery;
   const { data } = await api.get("/visualization/options", { params });
+  return data;
+}
+
+// -- Admin APIs --
+export async function listUsers() {
+  const { data } = await api.get("/admin/users");
+  return data;
+}
+
+export async function updateUserRole(username, role) {
+  const { data } = await api.put(`/admin/users/${encodeURIComponent(username)}/role`, { role });
+  return data;
+}
+
+export async function deleteUser(username) {
+  const { data } = await api.delete(`/admin/users/${encodeURIComponent(username)}`);
   return data;
 }
