@@ -54,14 +54,14 @@ conda activate single-cell-ann
 python -m backend.app
 ```
 
-如需启用 AI 辅助分析，先配置硅基流动接口：
+如需启用 AI 辅助分析，先复制并编辑环境变量文件：
 
-```powershell
-$env:SCANN_LLM_API_URL="https://api.siliconflow.cn/v1/chat/completions"
-$env:SCANN_LLM_API_KEY="你的硅基流动密钥"
-$env:SCANN_LLM_MODEL="Qwen/Qwen3-8B"
-$env:SCANN_LLM_ENABLE_THINKING="false"
+```bash
+cp .env.example .env
+# 编辑 .env，填入你的 SCANN_LLM_API_KEY
 ```
+
+配置项说明见 `.env.example` 中的注释。后端启动时会自动读取项目根目录下的 `.env` 文件。
 
 进入工作区后，可在左侧导航打开“AI 辅助分析”大屏，临时开启或关闭 Qwen3 思考模式；开启后分析更充分但响应会更慢。大屏会复用检索后的 UMAP 空间图展示查询细胞与 Top-K 命中位置关系，同时把系统提示词增强后的分析结构渲染为 SVG 层次图，并结合距离统计、细胞组成、查询邻域网络和 AI Markdown 报告形成完整可视化视图。
 

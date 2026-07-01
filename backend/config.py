@@ -3,6 +3,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+
+    _ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+    if _ENV_PATH.exists():
+        load_dotenv(_ENV_PATH)
+except ImportError:  # pragma: no cover — python-dotenv 未安装时回退到系统环境变量
+    pass
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
