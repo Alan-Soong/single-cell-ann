@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { WorkspaceShell } from "./components/WorkspaceShell";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { AiAnalysisPage } from "./pages/AiAnalysisPage";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { DatasetPage } from "./pages/DatasetPage";
 import { IndexPage } from "./pages/IndexPage";
@@ -49,6 +50,7 @@ export default function App() {
       workspace={workspace}
     >
       {view === "analysis" ? <AnalysisPage workspace={workspace} guestMode={guestMode} /> : null}
+      {view === "ai" ? <AiAnalysisPage workspace={workspace} guestMode={guestMode} /> : null}
       {view === "datasets" ? <DatasetPage workspace={workspace} guestMode={guestMode} /> : null}
       {view === "indexes" ? <IndexPage workspace={workspace} guestMode={guestMode} /> : null}
     </WorkspaceShell>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  analyzeSearchResult,
   buildIndex,
   getCurrentDataset,
   getCurrentUser,
@@ -80,6 +81,11 @@ export function useWorkspace() {
   const [queryDatasetId, setQueryDatasetId] = useState("");
   const [topK, setTopK] = useState(10);
   const [searchResult, setSearchResult] = useState(null);
+  const [llmAnalysis, setLlmAnalysis] = useState(null);
+  const [llmQuestion, setLlmQuestion] = useState("");
+  const [llmEnableThinking, setLlmEnableThinking] = useState(false);
+  const [llmBusy, setLlmBusy] = useState(false);
+  const [llmError, setLlmError] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -145,6 +151,11 @@ export function useWorkspace() {
     } finally {
       setBusy("");
     }
+  }
+
+  function clearLlmAnalysis() {
+    setLlmAnalysis(null);
+    setLlmError("");
   }
 
   function resolveSelectedDatasets(nextDatasets, nextIndex, currentSelection = selectedDatasetIds) {
@@ -314,6 +325,7 @@ export function useWorkspace() {
       await logoutUser();
       setAuth(EMPTY_AUTH);
       setSearchResult(null);
+      clearLlmAnalysis();
       await fetchWorkspaceStatus();
     });
   }
@@ -338,6 +350,7 @@ export function useWorkspace() {
       : [...selectedDatasetIds, datasetId];
     setSelectedDatasetIds(nextSelectedIds);
     setSearchResult(null);
+    clearLlmAnalysis();
     const dataset = datasets.find((item) => item.dataset_id === nextSelectedIds[0]);
     if (dataset?.sample_cell_ids?.[0]) {
       setQueryDatasetId(dataset.dataset_id);
@@ -362,6 +375,7 @@ export function useWorkspace() {
       const nextSelectedIds = resolveSelectedDatasets(nextDatasets, indexStatus);
       setSelectedDatasetIds(nextSelectedIds);
       setSearchResult(null);
+      clearLlmAnalysis();
     });
   }
 
@@ -375,6 +389,7 @@ export function useWorkspace() {
       await refreshDatasets();
       setSelectedDatasetIds((current) => [...new Set([...current, uploaded.dataset_id])]);
       setSearchResult(null);
+      clearLlmAnalysis();
       setUploadFile(null);
     });
   }
@@ -400,6 +415,7 @@ export function useWorkspace() {
       setQueryDatasetId(loaded.dataset_id);
       setQueryCellId(loaded.sample_cell_ids?.[0] || queryCellId);
       setSearchResult(null);
+      clearLlmAnalysis();
       await fetchVisualization([loaded.dataset_id]);
       await refreshDatasets();
     });
@@ -420,6 +436,7 @@ export function useWorkspace() {
       setIndexStatus(data);
       setSelectedIndexId(data.active_index_id || data.index_id || "");
       setSearchResult(null);
+      clearLlmAnalysis();
       await fetchVisualization(data.dataset_ids?.length ? data.dataset_ids : selectedDatasetIds);
     });
   }
@@ -432,12 +449,14 @@ export function useWorkspace() {
       const nextDatasetIds = data.dataset_ids || [];
       setSelectedDatasetIds(nextDatasetIds);
       setSearchResult(null);
+      clearLlmAnalysis();
       await fetchVisualization(nextDatasetIds);
     });
   }
 
   async function handleSearch() {
     return runAction("search", async () => {
+      clearLlmAnalysis();
       const nextTopK = clampInteger(topK, TOP_K_MIN, TOP_K_MAX, 10);
       setTopK(nextTopK);
       const result = await searchCells({
@@ -451,6 +470,29 @@ export function useWorkspace() {
       setSelectedDatasetIds(visualDatasetIds);
       await fetchVisualization(visualDatasetIds);
     });
+  }
+
+  async function handleAnalyzeSearchResult() {
+    if (!searchResult?.hits?.length) {
+      setLlmError("请先执行检索并获得 Top-K 结果。");
+      return null;
+    }
+    setLlmBusy(true);
+    setLlmError("");
+    try {
+      const result = await analyzeSearchResult({
+        searchResult,
+        question: llmQuestion.trim(),
+        enableThinking: llmEnableThinking,
+      });
+      setLlmAnalysis(result);
+      return result;
+    } catch (analysisError) {
+      setLlmError(getErrorMessage(analysisError));
+      return null;
+    } finally {
+      setLlmBusy(false);
+    }
   }
 
   async function handleApplyGeneColor() {
@@ -515,6 +557,7 @@ export function useWorkspace() {
     canSearch,
     canSwitchIndex,
     canVisualize,
+    clearLlmAnalysis,
     clearError: () => setError(""),
     connectionError,
     datasetSummary,
@@ -522,6 +565,7 @@ export function useWorkspace() {
     error,
     exportVisualizationCsv,
     handleApplyGeneColor,
+    handleAnalyzeSearchResult,
     handleAuth,
     handleBuildIndex,
     handleClearVisualFilters,
@@ -540,6 +584,11 @@ export function useWorkspace() {
     indexOptions,
     indexStatus,
     initializing,
+    llmAnalysis,
+    llmBusy,
+    llmEnableThinking,
+    llmError,
+    llmQuestion,
     nlist,
     nprobe,
     normalizeIndexParameters,
@@ -553,6 +602,8 @@ export function useWorkspace() {
     selectedDatasets,
     selectedIndexId,
     setIndexMode,
+    setLlmEnableThinking,
+    setLlmQuestion,
     setNlist,
     setNprobe,
     setQueryCellId,

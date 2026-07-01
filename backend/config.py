@@ -3,6 +3,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+
+    _ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+    if _ENV_PATH.exists():
+        load_dotenv(_ENV_PATH)
+except ImportError:  # pragma: no cover — python-dotenv 未安装时回退到系统环境变量
+    pass
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
@@ -41,3 +50,11 @@ class Config:
     DEFAULT_VIS_LIMIT = int(os.getenv("SCANN_DEFAULT_VIS_LIMIT", "5000"))
     FAISS_NLIST = int(os.getenv("SCANN_FAISS_NLIST", "256"))
     FAISS_NPROBE = int(os.getenv("SCANN_FAISS_NPROBE", "16"))
+
+    LLM_API_URL = os.getenv("SCANN_LLM_API_URL", "https://api.siliconflow.cn/v1/chat/completions")
+    LLM_API_KEY = os.getenv("SCANN_LLM_API_KEY", "")
+    LLM_MODEL = os.getenv("SCANN_LLM_MODEL", "Qwen/Qwen3-8B")
+    LLM_TIMEOUT_SECONDS = int(os.getenv("SCANN_LLM_TIMEOUT_SECONDS", "90"))
+    LLM_MAX_TOKENS = int(os.getenv("SCANN_LLM_MAX_TOKENS", "600"))
+    LLM_TEMPERATURE = float(os.getenv("SCANN_LLM_TEMPERATURE", "0.2"))
+    LLM_ENABLE_THINKING = os.getenv("SCANN_LLM_ENABLE_THINKING", "false").lower() in {"1", "true", "yes"}
