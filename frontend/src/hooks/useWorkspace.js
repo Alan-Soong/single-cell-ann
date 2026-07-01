@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   analyzeSearchResult,
+  batchSearch,
   buildIndex,
+  compareSearch,
+  exactSearch,
   getCurrentDataset,
   getCurrentUser,
   getHealth,
@@ -60,8 +63,13 @@ export function useWorkspace() {
   const [indexStatus, setIndexStatus] = useState(null);
   const [selectedIndexId, setSelectedIndexId] = useState("");
   const [indexMode, setIndexMode] = useState("combined");
+  const [indexType, setIndexType] = useState("ivf_flat");
+  const [indexMetric, setIndexMetric] = useState("l2");
   const [nlist, setNlist] = useState(256);
   const [nprobe, setNprobe] = useState(16);
+  const [hnswM, setHnswM] = useState(32);
+  const [hnswEfConstruction, setHnswEfConstruction] = useState(200);
+  const [hnswEfSearch, setHnswEfSearch] = useState(64);
   const [visPoints, setVisPoints] = useState([]);
   const [visOptions, setVisOptions] = useState(null);
   const [visualColorBy, setVisualColorBy] = useState("cell_type");
@@ -81,6 +89,12 @@ export function useWorkspace() {
   const [queryDatasetId, setQueryDatasetId] = useState("");
   const [topK, setTopK] = useState(10);
   const [searchResult, setSearchResult] = useState(null);
+  const [compareResult, setCompareResult] = useState(null);
+  const [searchFilters, setSearchFilters] = useState({ ...EMPTY_FILTERS });
+  const [exactMode, setExactMode] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [batchCellIds, setBatchCellIds] = useState("");
+  const [batchResult, setBatchResult] = useState(null);
   const [llmAnalysis, setLlmAnalysis] = useState(null);
   const [llmQuestion, setLlmQuestion] = useState("");
   const [llmEnableThinking, setLlmEnableThinking] = useState(false);
@@ -151,6 +165,26 @@ export function useWorkspace() {
     } finally {
       setBusy("");
     }
+  }
+
+  async function handleBatchSearch() {
+    const ids = batchCellIds
+      .split(/\n|,/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!ids.length) {
+      setError("请输入至少一个 Cell ID");
+      return;
+    }
+    return runAction("batch", async () => {
+      const result = await batchSearch({
+        cellIds: ids,
+        topK: clampInteger(topK, TOP_K_MIN, TOP_K_MAX, 10),
+        datasetId: queryDatasetId,
+        indexId: selectedIndexId,
+      });
+      setBatchResult(result);
+    });
   }
 
   function clearLlmAnalysis() {
@@ -432,7 +466,17 @@ export function useWorkspace() {
   async function handleBuildIndex() {
     return runAction("index", async () => {
       const { nlist: nextNlist, nprobe: nextNprobe } = normalizeIndexParameters();
-      const data = await buildIndex({ datasetIds: selectedDatasetIds, mode: indexMode, nlist: nextNlist, nprobe: nextNprobe });
+      const data = await buildIndex({
+        datasetIds: selectedDatasetIds,
+        mode: indexMode,
+        nlist: nextNlist,
+        nprobe: nextNprobe,
+        indexType,
+        metric: indexMetric,
+        M: hnswM,
+        efConstruction: hnswEfConstruction,
+        efSearch: hnswEfSearch,
+      });
       setIndexStatus(data);
       setSelectedIndexId(data.active_index_id || data.index_id || "");
       setSearchResult(null);
@@ -457,18 +501,42 @@ export function useWorkspace() {
   async function handleSearch() {
     return runAction("search", async () => {
       clearLlmAnalysis();
+      setCompareResult(null);
       const nextTopK = clampInteger(topK, TOP_K_MIN, TOP_K_MAX, 10);
       setTopK(nextTopK);
-      const result = await searchCells({
-        cellId: queryCellId,
-        topK: nextTopK,
-        datasetId: queryDatasetId,
-        indexId: selectedIndexId,
-      });
+
+      if (compareMode) {
+        const result = await compareSearch({
+          cellId: queryCellId,
+          topK: nextTopK,
+          datasetId: queryDatasetId,
+          indexId: selectedIndexId,
+        });
+        setCompareResult(result);
+        setSearchResult(result.ann);
+        const visualDatasetIds = result.ann?.index?.dataset_ids?.length
+          ? result.ann.index.dataset_ids
+          : selectedDatasetIds;
+        setSelectedDatasetIds(visualDatasetIds);
+        await fetchVisualization(visualDatasetIds.length ? visualDatasetIds : selectedDatasetIds);
+        return;
+      }
+
+      const result = exactMode
+        ? await exactSearch({ cellId: queryCellId, topK: nextTopK, datasetId: queryDatasetId })
+        : await searchCells({
+            cellId: queryCellId,
+            topK: nextTopK,
+            datasetId: queryDatasetId,
+            indexId: selectedIndexId,
+            metadataFilters: Object.fromEntries(
+              Object.entries(searchFilters).filter(([, v]) => v && String(v).trim()),
+            ) || undefined,
+          });
       setSearchResult(result);
-      const visualDatasetIds = result.index?.dataset_ids?.length ? result.index.dataset_ids : selectedDatasetIds;
+      const visualDatasetIds = result.index?.dataset_ids?.length ? result.index.dataset_ids : (result.query?.dataset_id ? [result.query.dataset_id] : selectedDatasetIds);
       setSelectedDatasetIds(visualDatasetIds);
-      await fetchVisualization(visualDatasetIds);
+      await fetchVisualization(visualDatasetIds.length ? visualDatasetIds : selectedDatasetIds);
     });
   }
 
@@ -550,6 +618,8 @@ export function useWorkspace() {
     appliedVisualDatasets,
     appliedVisualState,
     auth,
+    batchCellIds,
+    batchResult,
     busy,
     canBuildIndex,
     canLoadDataset,
@@ -559,14 +629,18 @@ export function useWorkspace() {
     canVisualize,
     clearLlmAnalysis,
     clearError: () => setError(""),
+    compareMode,
+    compareResult,
     connectionError,
     datasetSummary,
     datasets,
     error,
+    exactMode,
     exportVisualizationCsv,
     handleApplyGeneColor,
     handleAnalyzeSearchResult,
     handleAuth,
+    handleBatchSearch,
     handleBuildIndex,
     handleClearVisualFilters,
     handleLoadSelectedDataset,
@@ -580,9 +654,14 @@ export function useWorkspace() {
     handleUploadDataset,
     handleValidateDatasets,
     health,
+    hnswEfConstruction,
+    hnswEfSearch,
+    hnswM,
+    indexMetric,
     indexMode,
     indexOptions,
     indexStatus,
+    indexType,
     initializing,
     llmAnalysis,
     llmBusy,
@@ -597,17 +676,27 @@ export function useWorkspace() {
     queryCellId,
     queryDatasetId,
     role,
+    searchFilters,
     searchResult,
     selectedDatasetIds,
     selectedDatasets,
     selectedIndexId,
+    setBatchCellIds,
+    setCompareMode,
+    setExactMode,
+    setHnswEfConstruction,
+    setHnswEfSearch,
+    setHnswM,
+    setIndexMetric,
     setIndexMode,
+    setIndexType,
     setLlmEnableThinking,
     setLlmQuestion,
     setNlist,
     setNprobe,
     setQueryCellId,
     setQueryDatasetId,
+    setSearchFilters,
     setSelectedDatasetIds,
     setTopK,
     setUploadFile,
