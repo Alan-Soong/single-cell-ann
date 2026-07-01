@@ -1,4 +1,4 @@
-import { Activity, Bot, Database, Dna, GitBranch, LogIn, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, Bot, Database, Dna, GitBranch, LogIn, LogOut, RefreshCw, Shield, ShieldCheck, UserRound } from "lucide-react";
 
 import { ROLE_LABELS } from "../constants";
 import { ErrorBanner, IconButton, StatusBadge } from "./ui";
@@ -15,6 +15,7 @@ const PAGE_META = {
   ai: { eyebrow: "AI analysis", title: "智能分析大屏", description: "基于 Top-K 邻域、元数据统计和大模型报告的综合解读" },
   datasets: { eyebrow: "Data registry", title: "数据集", description: "维护单细胞数据源与向量准备状态" },
   indexes: { eyebrow: "Vector index", title: "索引管理", description: "构建、检查与切换 FAISS 服务索引" },
+  admin: { eyebrow: "Administration", title: "系统管理", description: "用户账号管理与角色分配" },
 };
 
 export function WorkspaceShell({ view, onViewChange, guestMode, onExitGuest, onLogout, workspace, children }) {
@@ -52,6 +53,12 @@ export function WorkspaceShell({ view, onViewChange, guestMode, onExitGuest, onL
               </button>
             );
           })}
+          {workspace.role === "admin" ? (
+            <button key="admin" className={`nav-item ${view === "admin" ? "active" : ""}`} onClick={() => onViewChange("admin")}>
+              <Shield size={18} />
+              <span>系统管理</span>
+            </button>
+          ) : null}
         </nav>
 
         <div className="sidebar-footer">

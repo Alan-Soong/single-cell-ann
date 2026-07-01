@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { WorkspaceShell } from "./components/WorkspaceShell";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { AdminPage } from "./pages/AdminPage";
 import { AiAnalysisPage } from "./pages/AiAnalysisPage";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { DatasetPage } from "./pages/DatasetPage";
@@ -53,6 +54,7 @@ export default function App() {
       {view === "ai" ? <AiAnalysisPage workspace={workspace} guestMode={guestMode} /> : null}
       {view === "datasets" ? <DatasetPage workspace={workspace} guestMode={guestMode} /> : null}
       {view === "indexes" ? <IndexPage workspace={workspace} guestMode={guestMode} /> : null}
+      {view === "admin" ? <AdminPage workspace={workspace} /> : null}
     </WorkspaceShell>
   );
 }
